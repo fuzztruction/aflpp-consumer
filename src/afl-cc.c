@@ -437,8 +437,8 @@ static void process_params(u32 argc, char **argv) {
     if (lto_mode && !strncmp(cur, "--ld-path=", 10)) continue;
     if (!strncmp(cur, "-fno-unroll", 11)) continue;
     if (strstr(cur, "afl-compiler-rt") || strstr(cur, "afl-llvm-rt")) continue;
-    if (!strcmp(cur, "-Wl,-z,defs") || !strcmp(cur, "-Wl,--no-undefined") ||
-        !strcmp(cur, "--no-undefined")) {
+    if (!strcmp(cur, "-Wl,-z,defs") || !strcmp(cur, "-Wl,-no-undefined") ||
+        !strcmp(cur, "-Wl,--no-undefined") || !strcmp(cur, "--no-undefined")) {
 
       continue;
 

@@ -364,8 +364,39 @@ bool ModuleSanitizerCoverageAFL::instrumentModule(
   Int16Ty = IRB.getInt16Ty();
   Int8Ty = IRB.getInt8Ty();
   Int1Ty = IRB.getInt1Ty();
-
   LLVMContext &Ctx = M.getContext();
+
+  // Insert a call to __ft_after_listen after the 'listen' function returns.
+  auto listen_hook_fn = M.getOrInsertFunction("__ft_after_listen", FunctionType::getVoidTy(M.getContext()));
+  auto listen_fn = M.getFunction("listen");
+  if (listen_fn && listen_fn->arg_size() == 2) {
+      // check if arg types match those of the type of listen function we are interested in.
+      auto first_arg = listen_fn->getArg(0);
+      auto second_arg = listen_fn->getArg(1);
+      if (first_arg->getType()->isIntegerTy() && second_arg->getType()->isIntegerTy()) {
+          for (const auto& user : listen_fn->users()) {
+              if(CallInst* call_ins = dyn_cast<CallInst>(user)) {
+                  dbgs() << *call_ins << "\n";
+                  IRBuilder<> ins_builder(call_ins->getNextNode());
+                  ins_builder.CreateCall(listen_hook_fn);
+              }
+          }
+      }
+  }
+
+  // Insert a call to __ft_after_bind after the 'bind' function returns.
+  auto bind_hook_fn = M.getOrInsertFunction("__ft_after_bind", FunctionType::getVoidTy(M.getContext()));
+  auto bind_fn = M.getFunction("bind");
+  if (bind_fn && bind_fn->arg_size() == 3) {
+      for (const auto& user : bind_fn->users()) {
+          if(CallInst* call_ins = dyn_cast<CallInst>(user)) {
+              dbgs() << *call_ins << "\n";
+              IRBuilder<> ins_builder(call_ins->getNextNode());
+              ins_builder.CreateCall(bind_hook_fn);
+          }
+      }
+  }
+
   AFLMapPtr =
       new GlobalVariable(M, PointerType::get(Int8Ty, 0), false,
                          GlobalValue::ExternalLinkage, 0, "__afl_area_ptr");

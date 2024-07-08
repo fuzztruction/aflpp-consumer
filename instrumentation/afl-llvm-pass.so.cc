@@ -26,6 +26,8 @@
 
  */
 
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DerivedTypes.h>
 #define AFL_LLVM_PASS
 
 #include "config.h"
@@ -74,6 +76,7 @@ typedef long double max_align_t;
 
 #include "afl-llvm-common.h"
 #include "llvm-alternative-coverage.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
 
@@ -201,6 +204,51 @@ bool AFLCoverage::runOnModule(Module &M) {
 
   LLVMContext &C = M.getContext();
 
+  // Insert a call to __ft_after_listen after the 'listen' function returns.
+  auto listen_hook_fn = M.getOrInsertFunction("__ft_after_listen", FunctionType::getVoidTy(M.getContext()));
+  auto listen_fn = M.getFunction("listen");
+  if (listen_fn && listen_fn->arg_size() == 2) {
+      // check if arg types match those of the type of listen function we are interested in.
+      auto first_arg = listen_fn->getArg(0);
+      auto second_arg = listen_fn->getArg(1);
+      if (first_arg->getType()->isIntegerTy() && second_arg->getType()->isIntegerTy()) {
+          for (const auto& user : listen_fn->users()) {
+              if(CallInst* call_ins = dyn_cast<CallInst>(user)) {
+                  dbgs() << *call_ins << "\n";
+                  IRBuilder<> ins_builder(call_ins->getNextNode());
+                  ins_builder.CreateCall(listen_hook_fn);
+              }
+          }
+      }
+  }
+
+  // Insert a call to __ft_after_bind after the 'bind' function returns.
+  auto bind_hook_fn = M.getOrInsertFunction("__ft_after_bind", FunctionType::getVoidTy(M.getContext()));
+  auto bind_fn = M.getFunction("bind");
+  if (bind_fn && bind_fn->arg_size() == 3) {
+      for (const auto& user : bind_fn->users()) {
+          if(CallInst* call_ins = dyn_cast<CallInst>(user)) {
+              dbgs() << *call_ins << "\n";
+              IRBuilder<> ins_builder(call_ins->getNextNode());
+              ins_builder.CreateCall(bind_hook_fn);
+          }
+      }
+  }
+
+
+  // GlobalVariable *ft_accept_was_called =
+  //     new GlobalVariable(M, PointerType::get(IntegerType::getInt8Ty(M.getContext()), 0), false,
+  //                        GlobalValue::ExternalLinkage, 0, "__ft_accept_was_called");
+
+  // auto accept_fn = M.getFunction("accept");
+  // if (accept_fn && accept_fn->arg_size() == 3) {
+  //     for (const auto& user : accept_fn->users()) {
+  //         if(CallInst* call_ins = dyn_cast<CallInst>(user)) {
+  //             IRBuilder<> ins_builder(call_ins->getNextNode());
+  //             ins_builder.CreateStore(ConstantInt::getBool(ft_accept_was_called->getType(), true), ft_accept_was_called);
+  //         }
+  //     }
+  // }
   IntegerType *Int8Ty = IntegerType::getInt8Ty(C);
   IntegerType *Int32Ty = IntegerType::getInt32Ty(C);
 #ifdef AFL_HAVE_VECTOR_INTRINSICS
@@ -1102,4 +1150,3 @@ static RegisterStandardPasses RegisterAFLPass(
 static RegisterStandardPasses RegisterAFLPass0(
     PassManagerBuilder::EP_EnabledOnOptLevel0, registerAFLPass);
 #endif
-

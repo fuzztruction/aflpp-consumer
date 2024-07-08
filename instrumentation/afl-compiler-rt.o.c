@@ -109,6 +109,8 @@ u32 __afl_dictionary_len;
 u64 __afl_map_addr;
 u32 __afl_first_final_loc;
 
+u8 __ft_accept_was_called;
+
 #ifdef __AFL_CODE_COVERAGE
 typedef struct afl_module_info_t afl_module_info_t;
 
@@ -210,7 +212,16 @@ static void at_exit(int signal) {
 
   }
 
-  _exit(0);
+  if (getenv("FT_CLEAN_EXIT_ON_SIGTERM")) {
+    // this is not allowed in signal handlers and just an hack to get llvm-cov working
+    // for targets that must be killed via sigterm. If we would call _exit instead,
+    // the at_exit handler of llvm-cov would not be called and coverage is not dumped to disk :awesome:
+    perror("FT_CLEAN_EXIT_ON_SIGTERM is set, calling exit. This might introduce bugs since its not signal safe to do so.\n");
+    fflush(NULL);
+    exit(0);
+  } else {
+    _exit(0);
+  }
 
 }
 
@@ -2657,5 +2668,22 @@ void __afl_set_persistent_mode(u8 mode) {
 
 }
 
-#undef write_error
+void __ft_after_listen() {
+  u32 val = 1;
+  printf("__ft_after_listen\n");
+  write(FORKSRV_FD + 2, &val, 4);
+}
 
+void __ft_after_bind() {
+  u32 val = 2;
+  printf("__ft_after_bind\n");
+  write(FORKSRV_FD + 2, &val, 4);
+}
+
+void __ft_server_ready() {
+  u32 val = 3;
+  printf("__ft_server_ready\n");
+  write(FORKSRV_FD + 2, &val, 4);
+}
+
+#undef write_error

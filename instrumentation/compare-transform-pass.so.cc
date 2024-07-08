@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <llvm/IR/DerivedTypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -270,11 +271,11 @@ bool CompareTransform::transformCmps(Module &M, const bool processStrcmp,
           isStrcmp &=
               FT->getNumParams() == 2 && FT->getReturnType()->isIntegerTy(32) &&
               FT->getParamType(0) == FT->getParamType(1) &&
-              FT->getParamType(0) == IntegerType::getInt8PtrTy(M.getContext());
+              FT->getParamType(0) == PointerType::getInt8Ty(M.getContext());
           isStrcasecmp &=
               FT->getNumParams() == 2 && FT->getReturnType()->isIntegerTy(32) &&
               FT->getParamType(0) == FT->getParamType(1) &&
-              FT->getParamType(0) == IntegerType::getInt8PtrTy(M.getContext());
+              FT->getParamType(0) == PointerType::getInt8Ty(M.getContext());
           isMemcmp &= FT->getNumParams() == 3 &&
                       FT->getReturnType()->isIntegerTy(32) &&
                       FT->getParamType(0)->isPointerTy() &&
@@ -284,13 +285,13 @@ bool CompareTransform::transformCmps(Module &M, const bool processStrcmp,
                        FT->getReturnType()->isIntegerTy(32) &&
                        FT->getParamType(0) == FT->getParamType(1) &&
                        FT->getParamType(0) ==
-                           IntegerType::getInt8PtrTy(M.getContext()) &&
+                           PointerType::getInt8Ty(M.getContext()) &&
                        FT->getParamType(2)->isIntegerTy();
           isStrncasecmp &= FT->getNumParams() == 3 &&
                            FT->getReturnType()->isIntegerTy(32) &&
                            FT->getParamType(0) == FT->getParamType(1) &&
                            FT->getParamType(0) ==
-                               IntegerType::getInt8PtrTy(M.getContext()) &&
+                               PointerType::getInt8Ty(M.getContext()) &&
                            FT->getParamType(2)->isIntegerTy();
 
           if (!isStrcmp && !isMemcmp && !isStrncmp && !isStrcasecmp &&
@@ -776,4 +777,3 @@ static RegisterStandardPasses RegisterCompTransPassLTO(
     PassManagerBuilder::EP_FullLinkTimeOptimizationLast, registerCompTransPass);
   #endif
 #endif
-

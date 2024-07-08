@@ -385,7 +385,7 @@ bool CmpLogRoutines::hookRtns(Module &M) {
           isStrcmp &=
               FT->getNumParams() == 2 && FT->getReturnType()->isIntegerTy(32) &&
               FT->getParamType(0) == FT->getParamType(1) &&
-              FT->getParamType(0) == IntegerType::getInt8PtrTy(M.getContext());
+              FT->getParamType(0) == PointerType::getInt8Ty(M.getContext());
 
           bool isStrncmp = (!FuncName.compare("strncmp") ||
                             !FuncName.compare("xmlStrncmp") ||
@@ -402,7 +402,7 @@ bool CmpLogRoutines::hookRtns(Module &M) {
                        FT->getReturnType()->isIntegerTy(32) &&
                        FT->getParamType(0) == FT->getParamType(1) &&
                        FT->getParamType(0) ==
-                           IntegerType::getInt8PtrTy(M.getContext()) &&
+                           PointerType::getInt8Ty(M.getContext()) &&
                        FT->getParamType(2)->isIntegerTy();
 
           bool isGccStdStringStdString =
@@ -792,4 +792,3 @@ static RegisterStandardPasses RegisterCmpLogRoutinesPassLTO(
     registerCmpLogRoutinesPass);
   #endif
 #endif
-
