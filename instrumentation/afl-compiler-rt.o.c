@@ -1281,11 +1281,14 @@ static void __afl_start_forkserver(void) {
       /* In child process: close fds, resume execution. */
 
       if (!child_pid) {
+        char *force_clean_exit = getenv("FT_CLEAN_EXIT_ON_SIGTERM");
 
         //(void)nice(-20);
 
         signal(SIGCHLD, old_sigchld_handler);
-        signal(SIGTERM, old_sigterm_handler);
+        if (!force_clean_exit) {
+            signal(SIGTERM, old_sigterm_handler);
+        }
 
         close(FORKSRV_FD);
         close(FORKSRV_FD + 1);
